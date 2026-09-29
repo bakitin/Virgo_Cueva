@@ -11,6 +11,8 @@
     <title>@yield('titulo') | Virgo Cueva</title>
 
 
+    <script>window.PRODUCTS = @json($productsJson);</script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
