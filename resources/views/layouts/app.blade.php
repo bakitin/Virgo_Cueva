@@ -22,6 +22,9 @@
             <div class="topbar__account">
                 @auth
                     <span class="topbar__user">Hola, {{ auth()->user()->name }}</span><span>·</span>
+                    @can('administrar')
+                        <a href="{{ route('admin.productos.index') }}">Panel admin</a><span>·</span>
+                    @endcan
                     <form method="POST" action="{{ route('logout') }}" class="topbar__logout">
                         @csrf
                         <button type="submit">Cerrar sesión</button>

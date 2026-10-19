@@ -605,6 +605,59 @@ h1, h2, h3, h4 { font-family: var(--font-display); }
 .footer__links a:hover { color: var(--accent); }
 .footer__copy { text-align: center; color: var(--text-muted); font-size: .8rem; padding-top: 20px; }
 
+/* ===================== PANEL DE ADMINISTRACIÓN ===================== */
+.admin { padding: 40px 0 80px; }
+.admin__toolbar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.btn--danger { background: var(--danger); color: #fff; border-color: transparent; }
+
+.admin-table-wrap { overflow-x: auto; background: var(--surface); border-radius: var(--radius); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.admin-table th, .admin-table td { padding: 12px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.admin-table th { background: var(--surface-2); font-family: var(--font-display); white-space: nowrap; }
+.admin-table tr:last-child td { border-bottom: none; }
+.admin-table__product { display: flex; align-items: center; gap: 12px; min-width: 260px; }
+.admin-table__product img { width: 56px; height: 56px; object-fit: contain; background: #fff; border-radius: 8px; padding: 4px; flex-shrink: 0; }
+.admin-table__product a, .admin-table__product strong { color: var(--text); text-decoration: none; font-weight: 700; }
+.admin-table__product a:hover { color: var(--accent); }
+.admin-table__product small { display: block; color: var(--text-muted); font-size: .78rem; }
+.admin-table__price { white-space: nowrap; }
+.admin-table__price .product-card__price-old { display: block; margin: 2px 0 0; }
+.admin-table__actions { white-space: nowrap; }
+.admin-table__empty { text-align: center; color: var(--text-muted); }
+
+.tag { display: inline-block; font-size: .72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; margin: 0 4px 4px 0; }
+.tag--on { background: rgba(123,201,154,0.15); color: var(--ok); }
+.tag--off { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+.tag--featured { background: rgba(255,209,102,0.15); color: var(--accent); }
+
+/* Confirmación de borrado: el botón final aparece al abrir el <details> */
+.admin-delete { display: inline-block; margin-left: 6px; vertical-align: top; }
+.admin-delete summary { list-style: none; }
+.admin-delete summary::-webkit-details-marker { display: none; }
+.admin-delete__confirm { margin-top: 10px; width: 220px; white-space: normal; background: var(--surface-2); border-radius: 10px; padding: 12px; }
+.admin-delete__confirm p { font-size: .8rem; color: var(--text-muted); margin-bottom: 10px; }
+
+.admin-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 24px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 28px;
+}
+.admin-form__field { display: flex; flex-direction: column; gap: 6px; }
+.admin-form__field--full { grid-column: 1 / -1; }
+.admin-form label { font-size: .85rem; color: var(--text-muted); }
+.admin-form input:not([type="checkbox"]), .admin-form select, .admin-form textarea {
+  background: var(--bg); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+  padding: 10px 12px; color: var(--text); font-family: inherit; font-size: .95rem;
+}
+.admin-form__hint { font-size: .75rem; color: var(--text-muted); }
+.admin-form__current-image { width: 120px; height: 120px; object-fit: contain; background: #fff; border-radius: 10px; padding: 8px; }
+.admin-form__checks { flex-direction: row; flex-wrap: wrap; gap: 24px; }
+.admin-form__checks label { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: .9rem; }
+.admin-form__actions { grid-column: 1 / -1; display: flex; gap: 12px; flex-wrap: wrap; }
+
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 900px) {
   .about__inner, .contact__inner, .cart__inner, .product-detail__inner { grid-template-columns: 1fr; }
@@ -630,4 +683,5 @@ h1, h2, h3, h4 { font-family: var(--font-display); }
   .topbar__inner { flex-direction: column; gap: 4px; padding: 8px 24px; }
   .cart-item { grid-template-columns: 70px 1fr; }
   .cart-item__price { grid-column: 1 / -1; text-align: left; }
+  .admin-form { grid-template-columns: 1fr; padding: 20px; }
 }

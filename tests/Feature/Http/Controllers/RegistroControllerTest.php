@@ -29,6 +29,20 @@ class RegistroControllerTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_registering_cannot_grant_admin_access(): void
+    {
+        $this->post(route('registro'), [
+            'name' => 'Intruso',
+            'email' => 'intruso@example.com',
+            'password' => 'clave-segura',
+            'password_confirmation' => 'clave-segura',
+            'terms' => '1',
+            'is_admin' => '1',
+        ]);
+
+        $this->assertFalse(User::where('email', 'intruso@example.com')->sole()->is_admin);
+    }
+
     public function test_an_email_that_already_has_an_account_is_rejected(): void
     {
         User::factory()->create(['email' => 'camila@example.com']);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminProductoController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\ContactoController;
 use App\Http\Controllers\InicioController;
@@ -31,6 +32,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+
+// Panel de administración: hay que iniciar sesión y ser el administrador (Gate "administrar").
+Route::middleware(['auth', 'can:administrar'])->prefix('admin')->name('admin.')->group(function () {
+    Route::redirect('/', '/admin/productos')->name('inicio');
+    Route::resource('productos', AdminProductoController::class)
+        ->except('show')
+        ->parameters(['productos' => 'product']);
+});
 
 // Páginas informativas: no consultan datos, así que no necesitan un controlador propio.
 Route::view('/nosotros', 'nosotros')->name('nosotros');

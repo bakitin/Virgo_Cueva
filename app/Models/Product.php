@@ -63,6 +63,24 @@ class Product extends Model
     }
 
     /**
+     * Reemplaza todas las especificaciones del producto, respetando el orden recibido.
+     *
+     * @param  list<string>  $values
+     */
+    public function replaceSpecs(array $values): void
+    {
+        $this->specs()->delete();
+
+        foreach ($values as $index => $value) {
+            $this->specs()->create([
+                'name' => 'Especificación',
+                'value' => $value,
+                'sort_order' => $index + 1,
+            ]);
+        }
+    }
+
+    /**
      * Productos visibles en la tienda.
      */
     #[Scope]

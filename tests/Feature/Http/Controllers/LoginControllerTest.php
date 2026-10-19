@@ -80,5 +80,14 @@ class LoginControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('Hola, Tomás');
         $response->assertSee('Cerrar sesión');
+        $response->assertDontSee('Panel admin');
+    }
+
+    public function test_header_links_the_admin_to_the_panel(): void
+    {
+        $response = $this->actingAs(User::factory()->admin()->create())->get(route('inicio'));
+
+        $response->assertOk();
+        $response->assertSee('href="'.route('admin.productos.index').'">Panel admin', false);
     }
 }
