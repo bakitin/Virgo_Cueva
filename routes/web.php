@@ -1,39 +1,40 @@
 <?php
 
-use App\Http\Controllers\CategoriasController;
-use App\Http\Controllers\InicioController;
-use App\Http\Controllers\ProductosController;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\OfertasController;
-use App\Http\Controllers\UsuariosController;
-use App\Http\Controllers\NosotrosController;
-use App\Http\Controllers\AyudaController;
-use App\Http\Controllers\ContactoController;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\NuevouController;
-use App\Http\Controllers\LoginController;
 use App\Http\Controllers\CarritoController;
-use App\Http\Controllers\GarantiaController;
-use App\Http\Controllers\Cambios_devolucionesController;
-use App\Http\Controllers\Pago_seguroController;
-use App\Http\Controllers\FaqController;
+use App\Http\Controllers\ContactoController;
+use App\Http\Controllers\InicioController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\OfertasController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\RegistroController;
+use Illuminate\Support\Facades\Route;
 
+Route::get('/', [InicioController::class, 'index'])->name('inicio');
 
+Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
+Route::get('/productos/{product:slug}', [ProductoController::class, 'show'])->name('productos.show');
+Route::get('/ofertas', [OfertasController::class, 'index'])->name('ofertas');
 
+Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+Route::post('/carrito/{product:slug}', [CarritoController::class, 'store'])->name('carrito.store');
+Route::patch('/carrito/{product:slug}', [CarritoController::class, 'update'])->name('carrito.update');
+Route::delete('/carrito/{product:slug}', [CarritoController::class, 'destroy'])->name('carrito.destroy');
 
-Route::get('/', [InicioController::class, 'index']);
-Route::get('/productos', [ProductosController::class, 'productos']);
-Route::get('/producto', [ProductoController::class, 'producto']);
-Route::get('/categorias', [CategoriasController::class, 'categorias']);
-Route::get('/usuarios', [UsuariosController::class, 'usuarios']);
-Route::get('/carrito', [CarritoController::class, 'carrito']);
-Route::get('/ofertas', [OfertasController::class, 'ofertas']);
-Route::get('/nuevou', [NuevouController::class, 'nuevou']);
-Route::get('/nosotros', [NosotrosController::class, 'nosotros']);
-Route::get('/ayuda', [AyudaController::class, 'ayuda']);
-Route::get('/contacto', [ContactoController::class, 'contacto']);
-Route::get('/login', [LoginController::class, 'login']);
-Route::get('/garantia', [GarantiaController::class, 'garantia']);
-Route::get('/cambios_devoluciones', [Cambios_devolucionesController::class, 'Cambios_devoluciones']);
-Route::get('/pago_seguro', [Pago_seguroController::class, 'pago_seguro']);
-Route::get('/faq', [FaqController::class, 'faq']);
+Route::get('/contacto', [ContactoController::class, 'create'])->name('contacto');
+Route::post('/contacto', [ContactoController::class, 'store']);
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'create'])->name('login');
+    Route::post('/login', [LoginController::class, 'store']);
+    Route::get('/registro', [RegistroController::class, 'create'])->name('registro');
+    Route::post('/registro', [RegistroController::class, 'store']);
+});
+
+Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
+
+// Páginas informativas: no consultan datos, así que no necesitan un controlador propio.
+Route::view('/nosotros', 'nosotros')->name('nosotros');
+Route::view('/garantia', 'garantia')->name('garantia');
+Route::view('/cambios_devoluciones', 'cambios_devoluciones')->name('cambios_devoluciones');
+Route::view('/pago_seguro', 'pago_seguro')->name('pago_seguro');
+Route::view('/faq', 'faq')->name('faq');

@@ -1,9 +1,10 @@
-  @extends('layouts.app')
+@extends('layouts.app')
 
-  @section( 'contenido')
+@section('titulo', 'Garantía')
 
+@section('contenido')
 
-<section class="page-header">
+  <section class="page-header">
     <div class="container">
       <span class="eyebrow">Compra con confianza</span>
       <h1>Garantía y soporte</h1>
@@ -78,9 +79,9 @@
         </div>
       </div>
       <p style="text-align:center; margin-top:36px">
-        <a href="/contacto" class="btn btn--primary">Hacer válida mi garantía</a>
+        <a href="{{ route('contacto') }}" class="btn btn--primary">Hacer válida mi garantía</a>
       </p>
     </div>
   </section>
 
-    @endsection
+@endsection

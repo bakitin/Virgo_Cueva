@@ -1,58 +1,71 @@
 @extends('layouts.app')
 
-@section('titulo', 'Producto')
+@section('titulo', $product->name)
 
 @section('contenido')
 
-<section class="product-detail">
-  <div class="container">
+    <section class="product-detail">
+        <div class="container">
 
-    <div id="product-not-found" class="product-detail__not-found" style="display:none">
-      <h2>Producto no encontrado</h2>
-      <p style="color:var(--text-muted); margin:10px 0 24px">El producto que buscas no existe o ya no está disponible.</p>
-      <a href="/productos" class="btn btn--primary">Ver catálogo</a>
-    </div>
+            <p class="breadcrumb">
+                <a href="{{ route('productos.index') }}">Productos</a> ·
+                <a href="{{ route('productos.index', ['categoria' => $product->category->slug]) }}">{{ $product->category->name }}</a> ·
+                <span>{{ $product->name }}</span>
+            </p>
 
-    <div id="product-content">
-      <p class="breadcrumb">
-        <a href="/productos">Productos</a> ·
-        <a id="prod-breadcrumb-category" href="/productos"></a> ·
-        <span id="prod-breadcrumb-name"></span>
-      </p>
+            <div class="product-detail__inner">
+                <div class="product-detail__media">
+                    <img src="{{ asset($product->image) }}" alt="{{ $product->name }}">
+                </div>
 
-      <div class="product-detail__inner">
-        <div class="product-detail__media">
-          <img id="prod-image" src="" alt="">
+                <div>
+                    @if ($product->old_price)
+                        <span class="detail-badge">Oferta</span>
+                    @elseif ($product->badge)
+                        <span class="detail-badge">{{ $product->badge }}</span>
+                    @endif
+                    <span class="product-detail__brand">{{ $product->brand->name }}</span>
+                    <h1 class="product-detail__name">{{ $product->name }}</h1>
+
+                    <div class="product-detail__price-row">
+                        <x-precio :valor="$product->price" class="product-detail__price" />
+                        @if ($product->old_price)
+                            <x-precio :valor="$product->old_price" class="product-detail__price-old" />
+                        @endif
+                    </div>
+
+                    <p class="product-detail__desc">{{ $product->description }}</p>
+
+                    @if ($product->specs->isNotEmpty())
+                        <ul class="product-detail__specs">
+                            @foreach ($product->specs as $spec)
+                                <li>{{ $spec->value }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+
+                    <div class="product-detail__actions">
+                        <form method="POST" action="{{ route('carrito.store', $product) }}">
+                            @csrf
+                            <button type="submit" class="btn btn--primary">Agregar al carrito</button>
+                        </form>
+                        <a href="{{ route('productos.index') }}" class="btn btn--outline">Seguir viendo productos</a>
+                    </div>
+                </div>
+            </div>
+
+            @if ($relatedProducts->isNotEmpty())
+                <section class="products" style="padding-top:56px">
+                    <h2 class="section-title">También te puede interesar</h2>
+                    <div class="products__grid">
+                        @foreach ($relatedProducts as $relatedProduct)
+                            <x-product-card :product="$relatedProduct" />
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
         </div>
-
-        <div>
-          <span id="prod-badge" class="detail-badge" style="display:none"></span>
-          <span id="prod-brand" class="product-detail__brand"></span>
-          <h1 id="prod-name" class="product-detail__name"></h1>
-
-          <div class="product-detail__price-row">
-            <span id="prod-price" class="product-detail__price"></span>
-            <span id="prod-oldprice" class="product-detail__price-old" style="display:none"></span>
-          </div>
-
-          <p id="prod-desc" class="product-detail__desc"></p>
-
-          <ul id="prod-specs" class="product-detail__specs"></ul>
-
-          <div class="product-detail__actions">
-            <button type="button" class="btn btn--primary">Agregar al carrito</button>
-            <a href="/productos" class="btn btn--outline">Seguir viendo productos</a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <section id="related-section" class="products" style="padding-top:56px">
-      <h2 class="section-title">También te puede interesar</h2>
-      <div class="products__grid" id="related-grid"></div>
     </section>
-
-  </div>
-</section>
 
 @endsection

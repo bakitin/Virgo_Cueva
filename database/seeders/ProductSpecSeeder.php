@@ -25,7 +25,7 @@ class ProductSpecSeeder extends Seeder
     }
 
     /**
-     * Specs por producto, transcritas de resources/js/products.js
+     * Specs por producto, indexadas por el slug del producto.
      */
     public function specs(): array
     {

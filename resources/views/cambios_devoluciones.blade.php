@@ -1,8 +1,10 @@
- @extends('layouts.app')
+@extends('layouts.app')
+
+@section('titulo', 'Cambios y devoluciones')
 
 @section('contenido')
- 
- <section class="page-header">
+
+  <section class="page-header">
     <div class="container">
       <span class="eyebrow">Sin drama</span>
       <h1>Cambios y devoluciones</h1>
@@ -46,9 +48,9 @@
         <li class="no"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg> Productos personalizados o marcados como "sin devolución" en su ficha.</li>
       </ul>
       <p style="text-align:center; margin-top:36px">
-        <a href="/contacto" class="btn btn--primary">Iniciar un cambio o devolución</a>
+        <a href="{{ route('contacto') }}" class="btn btn--primary">Iniciar un cambio o devolución</a>
       </p>
     </div>
-</section>
+  </section>
 
 @endsection

@@ -20,8 +20,11 @@ return new class extends Migration
             $table->string('slug', 150)->unique();
             $table->string('image')->nullable();
             $table->decimal('price', 12, 2);
+            $table->decimal('old_price', 12, 2)->nullable();
             $table->string('short_description')->nullable();
             $table->text('description')->nullable();
+            $table->string('badge')->nullable();
+            $table->boolean('featured')->default(false);
             $table->unsignedInteger('stock')->default(0);
             $table->boolean('is_active')->default(true);
 

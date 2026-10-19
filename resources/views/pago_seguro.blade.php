@@ -1,8 +1,10 @@
-  @extends('layouts.app')
+@extends('layouts.app')
 
-  @section( 'contenido')
-  
-<section class="page-header">
+@section('titulo', 'Pago seguro')
+
+@section('contenido')
+
+  <section class="page-header">
     <div class="container">
       <span class="eyebrow">Tu compra, protegida</span>
       <h1>Pago 100% seguro</h1>
@@ -55,20 +57,20 @@
     <div class="container">
       <h2 class="section-title">Preguntas rápidas</h2>
       <div class="faq__list" style="max-width:760px; margin:0 auto;">
-        <div class="faq-item">
-          <button class="faq-item__question">¿Puedo pagar contra entrega? <span>+</span></button>
+        <details class="faq-item">
+          <summary class="faq-item__question">¿Puedo pagar contra entrega? <span>+</span></summary>
           <div class="faq-item__answer"><p>Por ahora no, todos los pagos se procesan antes del despacho para evitar fraudes.</p></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-item__question">¿Qué pasa si me cobran dos veces? <span>+</span></button>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-item__question">¿Qué pasa si me cobran dos veces? <span>+</span></summary>
           <div class="faq-item__answer"><p>Escríbenos apenas lo notes con tu comprobante; el reverso lo gestionamos directo con la pasarela.</p></div>
-        </div>
-        <div class="faq-item">
-          <button class="faq-item__question">¿Emiten factura electrónica? <span>+</span></button>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-item__question">¿Emiten factura electrónica? <span>+</span></summary>
           <div class="faq-item__answer"><p>Sí, la factura electrónica llega a tu correo apenas se confirma el pago.</p></div>
-        </div>
+        </details>
       </div>
     </div>
   </section>
 
-  @endsection
+@endsection

@@ -1,87 +1,197 @@
 # Cambios hechos en el proyecto
 
-## 1. Como se conectaron los scripts
-
-**Qué se hizo:**
-- Se creó un archivo nuevo, `resources/js/app.js`, que es el que "enchufa" los tres scripts.
-- Se agregó esa conexión en la plantilla principal (`layouts/app.blade.php linea 14`), que es el molde que usan todas las páginas del sitio.
-- Como los tres archivos se pasan datos entre sí (por ejemplo, `script.js` necesita la lista de productos que vive en `products.js`), hubo que decirle a cada uno explícitamente "esto lo comparto" (`export`) y "esto lo uso de otro archivo" (`import`).
-
-Resultado: el menú hamburguesa, las grillas de productos, el acordeón de preguntas frecuentes, la cuenta regresiva de ofertas y el carrito ya funcionan.
-
-## 2. Las fotos de los productos no aparecían
-
-En `products.js`, cada producto tenía su foto apuntando a una carpeta que no existe en el proyecto (`assets/...`). Las fotos de verdad están guardadas en `public/images/...`. Era literalmente una dirección mal escrita.
-
-**Qué se hizo:** se corrigió la dirección de las 26 fotos para que apunten a donde realmente están (`public/images/...`). Se revisó nombre por nombre que cada foto exista ahí.
-
-También encontré este mismo error (fotos apuntando a una carpeta que no existe) escondido en otros 3 lugares del sitio: la sección de categorías de la portada, el banner de ofertas de la portada, y las dos fotos de ejemplo en el carrito. Se corrigieron también.
-
-## 3. Un montón de links llevaban a páginas que no existen
-
-El sitio antes era HTML puro (páginas sueltas tipo `productos.html`, `contacto.html`, etc.) y se está convirtiendo a Laravel, que usa "rutas" en vez de archivos (`/productos`, `/contacto`). El problema es que quedaron muchos botones y links todavía escritos a la manera vieja, apuntando a páginas `.html` que ya no existen en este proyecto. Si un cliente hacía clic, le salía error 404 (página no encontrada).
-
-**Qué se hizo:** se revisó todo el sitio y se cambiaron esos links viejos por las rutas reales de Laravel. Esto afectó, entre otros:
-- Los botones "Ver productos", "Ver ofertas" de la portada.
-- Las tarjetas de categorías (Teclados, Mouses, Audio, etc.) de la portada.
-- Los links de "Garantía", "Pago seguro", "Cambios y devoluciones", "Contacto" que aparecen repetidos en varias páginas (beneficios, preguntas frecuentes, políticas).
-- Los links entre "Iniciar sesión" y "Crear cuenta".
-- El botón "Ver producto" y la foto de cada producto en las grillas (los generaba el propio `script.js`, así que el arreglo fue ahí).
-
-## 4. Faltaba la página de "detalle de producto"
-
-Cuando el cliente hace clic en un producto, se supone que debería llevarlo a una página con toda la info de ese producto (foto grande, descripción, precio, especificaciones, productos relacionados). El archivo `producto.js` ya tenía toda la lógica lista para llenar esa página... pero la página en sí nunca se había creado.
-
-**Qué se hizo:** se creó esa página nueva (`/producto`), junto con su controlador (la piecita de Laravel que decide qué mostrar) y su plantilla visual, usando estilos que ya estaban preparados en el CSS del proyecto pero que nadie usaba todavía. Ahora, al hacer clic en cualquier producto, se abre su ficha completa con productos relacionados de la misma categoría al final.
-
-## 5. Los productos vivían escritos a mano en el JS, ahora salen de la base de datos
-
-`products.js` tenía los 38 productos del catálogo escritos directamente en el código, como un diccionario fijo. Eso significa que para agregar, editar o quitar un producto había que tocar código JavaScript a mano. La idea de esta parte era que esos productos vivan en la base de datos (con sus tablas `categories`, `brands`, `products`, `product_specs` que ya existían pero vacías) y que el sitio los muestre desde ahí, sin que `script.js` ni `producto.js` (los que dibujan las tarjetas y la página de detalle) tengan que cambiar ni una línea.
-
-**a) La base de datos no tenía todo lo que el sitio necesitaba**
-
-Las tablas ya existían (migraciones y modelos `Category`, `Brand`, `Product`, `ProductSpec`, `ProductImage`), pero a la tabla `products` le faltaban tres columnas que el sitio sí usa: `badge` (la etiqueta "Nuevo", "Premium", etc.), `featured` (si sale en la sección de destacados) y `old_price` (el precio anterior, para mostrar ofertas). Se agregó una migración nueva con esas tres columnas.
-
-También se agregaron las relaciones entre modelos que faltaban (`Product` pertenece a una `Category` y a una `Brand`, y tiene muchas `ProductSpec`), necesarias para poder pedirle a un producto sus datos relacionados de una sola vez.
-
-**b) Se llenaron los seeders con el catálogo real**
-
-Los seeders (`CategorySeeder`, `BrandSeeder`, `ProductSeeder`, `ProductSpecSeeder`) tenían solo 1-3 productos de ejemplo, que ni coincidían con las categorías y marcas reales del sitio. Se reescribieron transcribiendo uno por uno los 38 productos, 8 categorías, 19 marcas y 175 especificaciones que estaban en `products.js`, para que la base de datos termine con exactamente el mismo catálogo que se veía antes a mano.
-
-**c) La conexión a MySQL de XAMPP estaba apagada, literalmente**
-
-Al intentar correr las migraciones, PHP tiraba error de "driver no encontrado". La causa: en `C:\xampp\php\php.ini` las líneas `extension=mysqli` y `extension=pdo_mysql` estaban comentadas (desactivadas), así que PHP ni sabía hablar con MySQL. Se descomentaron esas dos líneas, se arrancó el servicio MySQL de XAMPP (estaba apagado) y se creó la base `virgocuevadb`. Después de eso, `php artisan migrate --seed` corrió sin errores y se verificó en la base que quedaron las 8 categorías, 19 marcas, 38 productos y 175 specs.
-
-**d) Cómo llega el dato de la base de datos hasta el JS, sin tocar `script.js` ni `producto.js`**
-
-Como `products.js` se carga en *todas* las páginas del sitio (está enchufado en `app.js`, que se carga desde la plantilla principal `layouts/app.blade.php`), no tenía sentido que un solo controlador (por ejemplo el de "Productos") sea el único que le pase los datos. En vez de eso, se usó lo que Laravel llama un "View Composer": una función que se registra en `AppServiceProvider` y que, cada vez que se va a mostrar la plantilla principal, automáticamente le pide al modelo `Product` todos los productos activos (con su categoría, marca y specs ya incluidas) y los deja listos en una variable (`$productsJson`) con la misma forma exacta que tenía cada producto en `products.js` (`id`, `category`, `brand`, `name`, `image`, `price`, `oldPrice`, `badge`, `featured`, `shortDesc`, `description`, `specs`).
-
-Esa variable se imprime en `layouts/app.blade.php` como `window.PRODUCTS = @json($productsJson)`, en una línea de `<script>` justo antes de que se cargue `app.js`. Como `window.PRODUCTS` ya existe en la página antes de que el navegador ejecute los módulos de JavaScript, `products.js` pudo simplificarse a esto: en vez del array escrito a mano, ahora hace `const PRODUCTS = window.PRODUCTS || []` y exporta `PRODUCTS` y `formatCOP` exactamente igual que antes. `script.js` y `producto.js` siguen haciendo `import { PRODUCTS, formatCOP } from './products.js'` sin ningún cambio: para ellos es invisible que el dato ahora viene de MySQL y no de un array fijo.
-
-**e) Cómo se probó**
-
-Se levantó el sitio con `php artisan serve` y se pidió la página `/productos` con `curl`, confirmando que el HTML trae el `window.PRODUCTS` relleno con los 38 productos en el formato correcto (se revisó el primer producto completo). También se contaron las filas de cada tabla directo en MySQL para confirmar que coinciden con el catálogo original: 8 categorías, 19 marcas, 38 productos, 175 specs.
-
-**Resultado:** ahora, para agregar o modificar un producto, se hace en la base de datos (por ejemplo desde phpMyAdmin, o agregando filas con Eloquent) y el cambio aparece en el sitio automáticamente en todas las páginas, sin tocar ningún archivo de JavaScript.
+**En una frase:** el sitio ahora funciona 100% con Laravel y el patrón MVC. Los datos salen de la base de datos a través de los **modelos**, los **controladores** los preparan y las **vistas** Blade arman el HTML en el servidor. Ya no queda ningún archivo de JavaScript propio.
 
 ---
 
-## ⚠️ Aclaración importante: acá NO hay ningún `fetch()`
+## ⚠️ Qué hacer después de bajar estos cambios
 
-Esto puede confundir porque uno espera que "traer datos de la base de datos" signifique una llamada AJAX desde el navegador (`fetch('/api/productos')` o algo así). **Acá no existe eso.** La data nunca viaja por una petición separada; se imprime directo dentro del HTML que Laravel genera, antes de que el navegador siquiera empiece a ejecutar JavaScript. El recorrido exacto es:
+Si ya tenías el proyecto instalado, corre esto en orden:
 
-1. **`app/Providers/AppServiceProvider.php`** — ahí vive un `View::composer('layouts.app', ...)`. Esto es una función que Laravel ejecuta automáticamente cada vez que se va a renderizar la plantilla `layouts.app` (o sea, en cada página del sitio). Adentro hace `Product::with(['category', 'brand', 'specs'])->get()`, que sí es una consulta a la base de datos (pero corre en el servidor, en PHP, no en el navegador), y arma un array con la misma forma que tenían los productos en el viejo `products.js`.
+```bash
+composer install                   # se agregó Laravel Boost (herramienta de desarrollo)
+php artisan migrate:fresh --seed   # borra y vuelve a crear la base (cambiaron las migraciones)
+npm run build                      # o "npm run dev"; ahora solo compila el CSS
+php artisan test                   # deben pasar las 44 pruebas
+```
 
-2. **`resources/views/layouts/app.blade.php`, línea 14** — la plantilla principal (el molde de todas las páginas) imprime ese array así: `<script>window.PRODUCTS = @json($productsJson);</script>`. Esa línea la escribe Blade (el motor de plantillas de Laravel) *antes* de la línea `@vite(...)` que carga `app.js`. Cuando el navegador recibe el HTML, ese `<script>` ya viene con los 38 productos escritos adentro, en texto plano JSON.
+Y en tu `.env` agrega o cambia estas dos líneas (ya vienen así en `.env.example`):
 
-3. **`resources/js/products.js`, línea 4** — acá es donde el JavaScript "recibe" el dato, pero no lo pide: solo lee una variable global que el HTML ya le dejó puesta. `const PRODUCTS = window.PRODUCTS || [];`
+```
+APP_LOCALE=es
+BOOST_BROWSER_LOGS_WATCHER=false
+```
 
-**En criollo:** en vez de que el navegador diga "che, mandame los productos" (fetch/AJAX) y el servidor le conteste después, el servidor ya viene con los productos metidos adentro del sobre (el HTML) cuando lo manda. `script.js` y `producto.js` ni se enteran del cambio, porque para ellos `PRODUCTS` sigue siendo un array normal disponible apenas arranca el script, exactamente como cuando estaba hardcodeado.
+`migrate:fresh` borra todas las tablas y las vuelve a llenar con el catálogo de los seeders. Solo se pierden los datos que hayas creado a mano (usuarios de prueba o mensajes de contacto).
 
 ---
 
-## En resumen
+## 1. Por qué antes no era MVC de verdad
 
-Antes: los scripts no se ejecutaban, las fotos no cargaban, la mitad de los links te mandaban a un error 404, y la página de cada producto individual ni existía.
+| Capa | Cómo estaba | El problema |
+| --- | --- | --- |
+| **Modelo** | Existían `Product`, `Category`, etc., pero la consulta la hacía un *View Composer* en `AppServiceProvider` | Pedía los 38 productos con sus specs en **todas** las páginas, se usaran o no |
+| **Controlador** | Casi todos solo hacían `return view('...')` | No decidían nada: no pedían datos ni procesaban formularios |
+| **Vista** | Las vistas eran cascarones vacíos (`<div id="productsGrid"></div>`) | El HTML de los productos lo armaba `script.js` en el navegador, a partir de `window.PRODUCTS` |
 
-Ahora: todo eso está conectado y probado (se corrió el build del proyecto y compila sin errores).
+Además, los formularios de login, registro y contacto eran de mentira (mostraban "Formulario de ejemplo") y el carrito tenía dos productos escritos a mano.
+
+## 2. Cómo funciona ahora: el recorrido de una página
+
+Ejemplo: un cliente abre `/productos?categoria=gpu`.
+
+1. **Ruta** (`routes/web.php`): `/productos` le corresponde a `ProductoController@index`.
+2. **Controlador** (`app/Http/Controllers/ProductoController.php`): lee el filtro `categoria=gpu` y le pide al modelo los productos activos de esa categoría.
+3. **Modelo** (`app/Models/Product.php`): hace la consulta con Eloquent (`Product::active()->...`) y devuelve los productos con su marca.
+4. **Vista** (`resources/views/productos.blade.php`): recorre los productos con `@foreach` y dibuja cada tarjeta con el componente `<x-product-card>`.
+
+El navegador recibe el HTML ya terminado. No hay que esperar a que corra ningún script.
+
+| Página | Controlador | Modelo(s) | Vista |
+| --- | --- | --- | --- |
+| Inicio | `InicioController@index` | `Category`, `Product` (destacados) | `index` |
+| Catálogo | `ProductoController@index` | `Product`, `Category` | `productos` |
+| Ficha de producto | `ProductoController@show` | `Product` (+ marca, categoría, specs) | `producto` |
+| Ofertas | `OfertasController@index` | `Product` (rebajados) | `ofertas` |
+| Carrito | `CarritoController` | `Product` + la sesión | `carrito` |
+| Contacto | `ContactoController` | `ContactMessage` (nuevo) | `contacto` |
+| Login / salir | `LoginController` | `User` | `login` |
+| Registro | `RegistroController` (antes `NuevouController`) | `User` | `registro` (antes `nuevou`) |
+| Nosotros, Garantía, Cambios, Pago seguro, FAQ | Ninguno: `Route::view` | Ninguno | Su vista |
+
+**Sobre las páginas informativas:** no consultan datos, así que no necesitan un controlador propio. `Route::view('/faq', 'faq')` es la forma oficial de Laravel para eso; por dentro usa su propio controlador interno. Si el profesor pide un controlador por página, volver a crearlos es trivial.
+
+## 3. Archivos eliminados (la purga)
+
+| Qué se borró | Por qué |
+| --- | --- |
+| `CategoriasController`, `UsuariosController` y sus vistas | Eran ejercicios de clase sueltos ("u1, u2, u3") y además daban **error 500** (ver errores 1) |
+| `AyudaController` y `ayuda.blade.php` | La vista estaba vacía y ningún link llevaba ahí |
+| `FaqController`, `GarantiaController`, `NosotrosController`, `Cambios_devolucionesController`, `Pago_seguroController` | Solo devolvían una vista; los reemplaza `Route::view` |
+| `ProductosController` | Se unió con `ProductoController` (`index` para el catálogo, `show` para la ficha), como pide la convención de Laravel |
+| `NuevouController` | Reemplazado por `RegistroController`, que ahora sí crea la cuenta |
+| `resources/js/` completo (`app.js`, `script.js`, `products.js`, `producto.js`) | Todo lo que hacían ahora lo hace Laravel (ver sección 4) |
+| Modelo `ProductImage`, su migración y su seeder | Ninguna página usaba esa tabla, y el seeder apuntaba a fotos que no existen (`ACIRA_2.webp`, `ACIRA_3.webp`) |
+| Migración `add_badge_featured_old_price_to_products_table` | Se fusionó con `create_products_table`: el proyecto no está publicado, así que no hace falta una migración aparte para tres columnas |
+| `tests/Unit/ExampleTest.php`, `tests/Feature/ExampleTest.php` | Pruebas de ejemplo de Laravel; las reemplazan las 44 pruebas reales |
+| `public/images/logo/logo-la-virgo-cueva.png`, `public/images/procesadores/PROCESADORES_EN_PROMO_2.webp` | Ninguna página las usaba. Si las necesitas: `git checkout HEAD -- <ruta>` |
+| CSS sin uso: testimonios, `.blob`, `.about__stats`, `.divider`, `.form-message`, `.hero__video` | Ninguna vista tenía esas clases |
+| Fuente "Instrument Sans" (en `vite.config.js` y `app.css`) | Venía con la plantilla de Laravel pero el sitio nunca la mostraba; solo agregaba 6 archivos de fuentes al build |
+
+Los parciales de `resources/views/indexbox/` y `inicio.blade.php` ya se habían quitado antes de esta ronda.
+
+## 4. Qué reemplazó a cada parte del JavaScript
+
+| Función | Antes (JS) | Ahora (Laravel / HTML) |
+| --- | --- | --- |
+| Tarjetas de productos | `script.js` armaba el HTML con `innerHTML` | Blade, con el componente `resources/views/components/product-card.blade.php` |
+| Filtro por categoría | Botones que filtraban un array en el navegador | Enlaces `/productos?categoria=teclados`; filtra el controlador con una consulta |
+| Ficha de producto | `producto.js` leía `?id=` y llenaba la página | Ruta `/productos/{slug}`: Laravel busca el producto por su slug (*route model binding*) y da 404 si no existe |
+| Productos relacionados | Filtro en JS | Consulta en el controlador: misma categoría, máximo 4 |
+| Cuenta regresiva | Contaba en vivo cada segundo | La calcula el servidor al cargar la página; no corre sola, se actualiza al recargar |
+| Preguntas frecuentes | Acordeón con JS | Etiquetas `<details>` y `<summary>`: el navegador las abre y cierra solo |
+| Menú hamburguesa (celular) | JS agregaba la clase `is-open` | Un checkbox oculto y CSS: el ícono es un `<label>` que lo activa |
+| Carrito | Lista fija con botones + y − hechos en JS | Carrito real guardado en la sesión de Laravel, con formularios (ver sección 5) |
+| Login y registro | Mostraban "Formulario de ejemplo" | Autenticación real de Laravel |
+| Formato de precios (`formatCOP`) | Función JS | Componente `<x-precio>`: `$1.234.900` |
+
+## 5. Funciones que antes eran de mentira y ahora funcionan
+
+- **Carrito.** "Agregar al carrito" en la ficha guarda el producto en la sesión. En `/carrito` se puede sumar, restar o eliminar; el subtotal, el envío ($17.900 fijo) y el total los calcula el servidor. No deja pedir más unidades que el stock, y el ícono del header muestra la cantidad real (antes decía "2" siempre).
+- **Cuentas de usuario.** El registro crea el usuario con la contraseña encriptada e inicia sesión. El login tiene "Recordarme" y se bloquea un minuto después de 5 intentos fallidos. Con la sesión iniciada, arriba aparece "Hola, Nombre · Cerrar sesión".
+- **Formulario de contacto.** Valida los datos y guarda cada mensaje en la tabla nueva `contact_messages` (modelo `ContactMessage`). Se pueden ver en phpMyAdmin o con `php artisan tinker` → `App\Models\ContactMessage::latest()->get()`.
+- **Buscador.** La lupa del header antes no hacía nada. Ahora abre un campo que busca por nombre, descripción o marca (`/productos?buscar=razer`) y se puede combinar con el filtro de categoría.
+- **Página de ofertas.** Antes solo mostraba la cuenta regresiva, sin ningún producto. Ahora lista los productos rebajados (los que tienen precio anterior).
+- **Página 404 propia.** Un producto o página que no existe muestra "No encontramos lo que buscas" con el diseño de la tienda, en vez de la página genérica de Laravel en inglés.
+- **Mensajes en español.** Los errores de los formularios ("El campo correo es obligatorio.") salen de `lang/es/validation.php` y `lang/es/auth.php`.
+
+## 6. Errores corregidos
+
+1. **`/categorias` y `/usuarios` daban error 500.** La ruta llamaba a métodos `categorias()` y `usuarios()`, pero los controladores tenían `index()`. Se eliminaron (sección 3).
+2. **`/cambios_devoluciones` daba error 500 en Linux.** El controlador pedía `view('Cambios_devoluciones')` con C mayúscula y el archivo es `cambios_devoluciones.blade.php`. En Windows (XAMPP) funcionaba porque Windows no distingue mayúsculas de minúsculas; Linux sí.
+3. **Al comentar los imports de `app.js` se rompieron varias páginas.** "Lo más pedido" de la portada quedó vacío, la ficha de producto también, y dejaron de funcionar los filtros, la FAQ, la cuenta regresiva y el carrito. Todo eso ahora lo hace Laravel (sección 4).
+4. **Errores en la grilla de `productos.blade.php`:**
+   - Las imágenes no cargaban: `asset('public' . ...)` generaba `/public/images/...`, una ruta que no existe.
+   - `data-category` usaba el nombre ("Tarjetas de video") en vez del slug (`gpu`), así que los filtros no coincidían.
+   - Los links usaban el id numérico (`?id=5`), pero la ficha buscaba por slug y mostraba "no encontrado".
+   - La etiqueta ("Nuevo", "Oferta") salía como texto suelto, sin estilo.
+   - Se usaba la clase `old-price`, que no existe en el CSS (la correcta es `product-card__price-old`).
+   - No se filtraban los productos inactivos.
+5. **La cuenta regresiva ya había vencido.** Tenía fija la fecha 30-sep-2026, así que solo mostraba "La oferta ya terminó". Ahora cuenta hasta el domingo a medianoche de cada semana, que coincide con el título "Ofertas de la semana".
+6. **La fuente de los títulos (Space Grotesk) nunca cargaba.** El `@import` estaba en medio de `app.css` y el compilador lo descartaba. Ahora se carga con un `<link>` en el layout.
+7. **El menú del celular nunca se veía, ni siquiera con el JS.** El header tiene `backdrop-filter`, y eso hace que un menú con `position: fixed` quede encerrado dentro del header (con alto cero). Ahora el menú se ubica justo debajo del header.
+8. **Contacto:**
+   - La imagen del mapa tenía el atributo `src` sin cerrar comillas.
+   - El archivo `mapa-ubicacion.jpg` no existe.
+   - Se reemplazó por un mapa de Google Maps embebido con la dirección de la tienda.
+9. **Nosotros:** la foto `nosotros-equipo.jpg` no existe. Mientras tanto se muestra el logo en una tarjeta (ver pendientes).
+10. **Once páginas no tenían título en la pestaña del navegador** (salía " | Virgo Cueva"). Ahora cada vista define el suyo; la ficha usa el nombre del producto.
+11. **Consulta innecesaria en todas las páginas.** El *View Composer* cargaba los 38 productos con sus 175 specs en cada página, incluso en "Garantía". Se eliminó; ahora cada controlador pide solo lo que necesita.
+12. **Riesgo de seguridad (XSS).** El JS metía los datos con `innerHTML` sin escaparlos. Blade escapa todo lo que imprime con `{{ }}`, y hay una prueba que lo verifica con el buscador. Todos los formularios llevan `@csrf`.
+13. **`.env.example` estaba borrado.** Lo necesitan `instalacion.md` y el script `composer setup`. Se restauró, con `APP_LOCALE=es`.
+14. **Detalles del layout:**
+    - El favicon se declaraba como `image/x-icon` siendo un PNG.
+    - El `src` del logo tenía un espacio al inicio.
+    - Los links estaban escritos a mano (`href="/contacto"`); ahora todos usan rutas con nombre (`route('contacto')`).
+
+## 7. Base de datos
+
+- **Migraciones:**
+  - `create_products_table` ahora incluye `badge`, `featured` y `old_price`.
+  - Se quitó `product_images`.
+  - Se agregó `create_contact_messages_table` (nombre, correo, motivo, mensaje).
+- **Modelos:**
+  - Relaciones con su tipo (`BelongsTo`, `HasMany`).
+  - *Casts*: precios como enteros, porque el peso colombiano no maneja centavos, y `featured` e `is_active` como verdadero/falso.
+  - Tres *scopes* reutilizables en `Product`: `active()`, `featured()` y `onSale()`.
+- **Seeders:**
+  - Cada categoría tiene su imagen, que es la que muestra la portada en "¿Qué andas buscando?".
+  - Se quitó `ProductImageSeeder`.
+  - Se revisó que las 38 imágenes de los seeders existan en `public/images`.
+- **Factories:** `Category`, `Brand`, `Product`, `ProductSpec` y `ContactMessage`, para crear datos de prueba en los tests.
+
+Resultado de `migrate:fresh --seed`: 8 categorías, 19 marcas, 38 productos (4 destacados, 6 en oferta) y 175 especificaciones.
+
+## 8. Rutas finales
+
+| URL | Método | Nombre | Quién responde |
+| --- | --- | --- | --- |
+| `/` | GET | `inicio` | `InicioController@index` |
+| `/productos` | GET | `productos.index` | `ProductoController@index` |
+| `/productos/{slug}` | GET | `productos.show` | `ProductoController@show` |
+| `/ofertas` | GET | `ofertas` | `OfertasController@index` |
+| `/carrito` | GET | `carrito.index` | `CarritoController@index` |
+| `/carrito/{slug}` | POST / PATCH / DELETE | `carrito.store` / `carrito.update` / `carrito.destroy` | `CarritoController` |
+| `/contacto` | GET / POST | `contacto` | `ContactoController@create` / `@store` |
+| `/login` | GET / POST | `login` | `LoginController` (solo sin sesión) |
+| `/registro` | GET / POST | `registro` | `RegistroController` (solo sin sesión) |
+| `/logout` | POST | `logout` | `LoginController@destroy` (solo con sesión) |
+| `/nosotros`, `/garantia`, `/cambios_devoluciones`, `/pago_seguro`, `/faq` | GET | Igual que la URL | `Route::view` |
+
+Cambiaron tres URLs: `/producto?id=acira` ahora es `/productos/acira`, `/nuevou` ahora es `/registro` y `/productos#teclados` ahora es `/productos?categoria=teclados`.
+
+## 9. Pruebas automáticas
+
+Hay 44 pruebas en `tests/Feature/` (`php artisan test`). Usan una base SQLite en memoria, así que **no tocan tu base MySQL**. Cubren:
+
+- Que el catálogo, la portada y las ofertas muestren solo productos activos.
+- Los filtros, la búsqueda y la ficha de producto, incluido el 404.
+- Todo el carrito: agregar, el límite de stock, cambiar cantidad, eliminar y los totales.
+- El registro, el login, el bloqueo tras 5 intentos y el cierre de sesión.
+- El formulario de contacto y sus mensajes de error en español.
+- Las páginas informativas.
+
+## 10. Herramientas
+
+- **Laravel Boost** quedó instalado como dependencia de desarrollo, porque así lo pedía el `CLAUDE.md` del proyecto. Agrega guías para asistentes de IA (`CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.mcp.json`, `boost.json`) y no afecta al sitio. Por defecto inyectaba un script en cada página para registrar errores del navegador; se desactivó con `BOOST_BROWSER_LOGS_WATCHER=false`.
+- Mientras corre `npm run dev`, el HTML trae un único `<script>`, el de Vite (`@vite/client`), que recarga la página al guardar cambios. Con `npm run build` (producción) no hay ningún `<script>`.
+
+## 11. Pendientes
+
+Estas cosas no se pudieron dejar funcionando porque dependen de servicios o contenido que el proyecto no tiene:
+
+- **"Ir a pagar":** no hay pasarela de pagos ni tabla de pedidos. El botón quedó deshabilitado con el aviso "El pago en línea todavía no está disponible". La página de login y la FAQ mencionan un "historial de pedidos" que todavía no existe.
+- **"Continuar con Google":** se quitó. Necesita credenciales de Google y el paquete Laravel Socialite.
+- **"¿Olvidaste tu contraseña?":** se quitó, porque los correos todavía no se envían (`MAIL_MAILER=log` los escribe en `storage/logs/laravel.log`). La respuesta de la FAQ ahora dice que escriban por contacto.
+- **Foto del equipo en "Nosotros":** basta con poner la foto en `public/images/` y cambiar el `src` en `nosotros.blade.php`.
+- **Redes sociales y términos y condiciones:** los links IG, TT, WA y "términos y condiciones" siguen apuntando a `#`.

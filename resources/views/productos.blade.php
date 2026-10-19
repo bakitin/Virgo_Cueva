@@ -4,34 +4,37 @@
 
 @section('contenido')
 
+    <section class="page-header">
+        <div class="container">
+            <span class="eyebrow">Catálogo completo</span>
+            <h1>Todo lo que necesitas para tu setup</h1>
+            <p>Filtra por categoría o revisa todo. Cada precio incluye IVA.</p>
+        </div>
+    </section>
 
-  <section class="page-header">
-    <div class="container">
-      <span class="eyebrow">Catálogo completo</span>
-      <h1>Todo lo que necesitas para tu setup</h1>
-      <p>Filtra por categoría o revisa todo. Cada precio incluye IVA.</p>
-    </div>
-  </section>
+    <section class="products" style="padding-top:32px">
+        <div class="container">
+            <nav class="filters" aria-label="Filtrar por categoría">
+                <a href="{{ request()->fullUrlWithoutQuery('categoria') }}" @class(['filter-btn', 'is-active' => $categorySlug === ''])>Todos</a>
+                @foreach ($categories as $category)
+                    <a href="{{ request()->fullUrlWithQuery(['categoria' => $category->slug]) }}" @class(['filter-btn', 'is-active' => $categorySlug === $category->slug])>{{ $category->name }}</a>
+                @endforeach
+            </nav>
 
-  <section class="products" style="padding-top:32px">
-    <div class="container">
-      <div class="filters" id="filters">
-        <button class="filter-btn is-active" data-filter="todos">Todos</button>
-        <button class="filter-btn" data-filter="teclados">Teclados</button>
-        <button class="filter-btn" data-filter="mouses">Mouses</button>
-        <button class="filter-btn" data-filter="audio">Audio</button>
-        <button class="filter-btn" data-filter="monitores">Monitores</button>
-        <button class="filter-btn" data-filter="sillas">Sillas</button>
-        <button class="filter-btn" data-filter="gabinetes">Gabinetes</button>
-        <button class="filter-btn" data-filter="gpu">Tarjetas de video</button>
-        <button class="filter-btn" data-filter="procesadores">Procesadores</button>
-      </div>
+            @if ($search !== '')
+                <p class="products__search">
+                    Resultados para «{{ $search }}» · <a href="{{ request()->fullUrlWithoutQuery('buscar') }}">Quitar búsqueda</a>
+                </p>
+            @endif
 
-      <div class="products__grid" id="productsGrid" data-mode="all">
+            <div class="products__grid">
+                @forelse ($products as $product)
+                    <x-product-card :product="$product" />
+                @empty
+                    <p class="products__empty">No encontramos productos con esos filtros.</p>
+                @endforelse
+            </div>
+        </div>
+    </section>
 
-
-      </div>
-    </div>
-  </section>
-    
 @endsection

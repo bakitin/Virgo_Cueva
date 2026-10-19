@@ -2,14 +2,25 @@
 
 namespace App\Models;
 
+use Database\Factories\ProductSpecFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductSpec extends Model
 {
+    /** @use HasFactory<ProductSpecFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'product_id',
         'name',
         'value',
         'sort_order',
     ];
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
 }

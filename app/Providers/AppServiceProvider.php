@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
-use App\Models\Product;
-use Illuminate\Support\Facades\View;
+use App\Http\Controllers\CarritoController;
+use Illuminate\Support\Facades;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,26 +22,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('layouts.app', function ($view) {
-            $products = Product::with(['category', 'brand', 'specs'])
-                ->where('is_active', true)
-                ->get()
-                ->map(fn (Product $product) => [
-                    'id' => $product->slug,
-                    'category' => $product->category->slug,
-                    'brand' => $product->brand->name,
-                    'name' => $product->name,
-                    'image' => $product->image,
-                    'price' => (float) $product->price,
-                    'oldPrice' => $product->old_price ? (float) $product->old_price : null,
-                    'badge' => $product->badge,
-                    'featured' => $product->featured,
-                    'shortDesc' => $product->short_description,
-                    'description' => $product->description,
-                    'specs' => $product->specs->sortBy('sort_order')->pluck('value')->values(),
-                ]);
-
-            $view->with('productsJson', $products);
+        Facades\View::composer('layouts.app', function (View $view): void {
+            $view->with('cartCount', array_sum(session(CarritoController::SESSION_KEY, [])));
         });
     }
 }

@@ -11,7 +11,7 @@ Guía paso a paso para dejar el sitio corriendo en una máquina nueva (Windows +
 ## 1. Clonar el repo e instalar dependencias
 
 ```bash
-git clone <url-del-repo>
+git clone https://github.com/bakitin/Virgo_Cueva
 cd Virgo_Cueva
 
 composer install
@@ -67,7 +67,7 @@ php artisan migrate --seed
 
 Esto crea todas las tablas y las llena con el catálogo completo (categorías, marcas, productos y especificaciones).
 
-## 6. Compilar los assets del frontend (CSS/JS)
+## 6. Compilar los assets del frontend (CSS)
 
 Para desarrollo, dejar corriendo en una terminal aparte (recarga automática al guardar cambios):
 

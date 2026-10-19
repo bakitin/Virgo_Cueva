@@ -1,8 +1,10 @@
-   @extends('layouts.app')
+@extends('layouts.app')
 
-  @section( 'contenido')
- 
- <section class="page-header">
+@section('titulo', 'Nosotros')
+
+@section('contenido')
+
+  <section class="page-header">
     <div class="container">
       <span class="eyebrow">Quiénes somos</span>
       <h1>Empezamos en un living, literal</h1>
@@ -12,9 +14,9 @@
 
   <section class="about">
     <div class="container about__inner">
-      <div class="about__media">
-        <!-- IMG: foto informal del equipo trabajando, no stock -->
-        <img src="{{ asset('images/logo/nosotros-equipo.jpg') }}" alt="Equipo de La Virgo Cueva">
+      <div class="about__media about__media--logo">
+        {{-- Pendiente: reemplazar el logo por una foto informal del equipo trabajando (no stock) --}}
+        <img src="{{ asset('images/logo/logo-header.png') }}" alt="Logo de La Virgo Cueva">
       </div>
       <div class="about__text">
         <h2 class="section-title section-title--left">De reventa entre amigos a tienda de verdad</h2>
@@ -89,4 +91,4 @@
     </div>
   </section>
 
-    @endsection
+@endsection
