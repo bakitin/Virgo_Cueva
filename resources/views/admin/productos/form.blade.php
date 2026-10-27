@@ -104,12 +104,12 @@
 </div>
 
 <div class="admin-form__field admin-form__field--full">
-    <label for="image">Foto {{ $product->exists ? '(opcional: solo si quieres cambiarla)' : '' }}</label>
+    <label for="image">Ruta de la foto {{ $product->exists ? '(opcional: solo si quieres cambiarla)' : '' }}</label>
     @if ($product->exists)
         <img src="{{ asset($product->image) }}" alt="Foto actual de {{ $product->name }}" class="admin-form__current-image">
     @endif
-    <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.webp" @required(! $product->exists)>
-    <span class="admin-form__hint">JPG, PNG o WEBP de hasta 2 MB.</span>
+    <input type="text" id="image" name="image" value="{{ old('image', $product->image) }}" maxlength="255" placeholder="/images/teclados/ACIRA_1.webp" @required(! $product->exists)>
+    <span class="admin-form__hint">Escribe la ruta pública de una imagen existente, por ejemplo /images/teclados/ACIRA_1.webp.</span>
     @error('image')
         <p class="form-error">{{ $message }}</p>
     @enderror

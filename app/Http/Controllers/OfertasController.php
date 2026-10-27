@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Http\Controllers\Api\ApiProductoController;
 use Carbon\WeekDay;
 use Illuminate\View\View;
 
 class OfertasController extends Controller
 {
+    public function __construct(private readonly ApiProductoController $productoApi) {}
+
     /**
      * Productos rebajados y el tiempo que queda de las "ofertas de la semana", que terminan el domingo.
      */
@@ -16,7 +18,7 @@ class OfertasController extends Controller
         $secondsLeft = (int) now()->diffInSeconds(now()->endOfWeek(WeekDay::Sunday));
 
         return view('ofertas', [
-            'products' => Product::active()->onSale()->with('brand')->orderBy('id')->get(),
+            'products' => $this->productoApi->getProductsOnSale(),
             'countdown' => [
                 'days' => intdiv($secondsLeft, 86400),
                 'hours' => intdiv($secondsLeft % 86400, 3600),

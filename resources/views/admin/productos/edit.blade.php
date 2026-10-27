@@ -14,7 +14,7 @@
 
     <section class="admin">
         <div class="container">
-            <form method="POST" action="{{ route('admin.productos.update', $product) }}" enctype="multipart/form-data" class="admin-form">
+            <form method="POST" action="{{ route('admin.productos.update', $product) }}" class="admin-form">
                 @method('PUT')
                 @include('admin.productos.form', ['product' => $product, 'categories' => $categories, 'brands' => $brands])
             </form>

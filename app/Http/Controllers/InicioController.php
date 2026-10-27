@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
-use App\Models\Product;
+use App\Http\Controllers\Api\ApiCatalogoController;
+use App\Http\Controllers\Api\ApiProductoController;
 use Illuminate\View\View;
 
 class InicioController extends Controller
 {
+    public function __construct(
+        private readonly ApiCatalogoController $catalogoApi,
+        private readonly ApiProductoController $productoApi,
+    ) {}
+
     public function index(): View
     {
         return view('index', [
-            'categories' => Category::orderBy('id')->get(),
-            'featuredProducts' => Product::active()->featured()->with('brand')->orderBy('id')->get(),
+            'categories' => $this->catalogoApi->getCategories(),
+            'featuredProducts' => $this->productoApi->getFeaturedProducts(),
         ]);
     }
 }

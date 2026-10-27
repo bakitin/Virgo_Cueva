@@ -8,8 +8,6 @@ use App\Models\Product;
 use App\Models\ProductSpec;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -54,15 +52,13 @@ class AdminProductoControllerTest extends TestCase
         $response->assertSee('<span class="tag tag--off">Oculto</span>', false);
     }
 
-    public function test_admin_creates_a_product_with_photo_and_specs(): void
+    public function test_admin_creates_a_product_with_image_path_and_specs(): void
     {
-        Storage::fake('public');
-
         $response = $this->actingAs(User::factory()->admin()->create())->post(route('admin.productos.store'), $this->validPayload([
             'name' => 'Razer Viper V3 Pro',
             'price' => 599900,
             'specs' => "Sensor de 35.000 DPI\n\n   54 gramos   ",
-            'image' => UploadedFile::fake()->create('viper.webp', 120, 'image/webp'),
+            'image' => '/images/teclados/ACIRA_1.webp',
         ]));
 
         $response->assertRedirect(route('admin.productos.index'));
@@ -73,13 +69,12 @@ class AdminProductoControllerTest extends TestCase
         $this->assertTrue($product->is_active);
         $this->assertFalse($product->featured);
         $this->assertSame(['Sensor de 35.000 DPI', '54 gramos'], $product->specs->pluck('value')->all());
-        $this->assertStringStartsWith('/storage/productos/', $product->image);
-        Storage::disk('public')->assertExists(substr($product->image, strlen('/storage/')));
+        $this->assertSame('/images/teclados/ACIRA_1.webp', $product->image);
     }
 
     public function test_a_photo_is_required_to_create_a_product(): void
     {
-        $response = $this->actingAs(User::factory()->admin()->create())->post(route('admin.productos.store'), $this->validPayload());
+        $response = $this->actingAs(User::factory()->admin()->create())->post(route('admin.productos.store'), $this->validPayload(['image' => '']));
 
         $response->assertSessionHasErrors(['image' => 'El campo foto es obligatorio.']);
         $this->assertDatabaseCount('products', 0);
@@ -87,11 +82,8 @@ class AdminProductoControllerTest extends TestCase
 
     public function test_the_category_must_exist(): void
     {
-        Storage::fake('public');
-
         $response = $this->actingAs(User::factory()->admin()->create())->post(route('admin.productos.store'), $this->validPayload([
             'category_id' => 999,
-            'image' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
         ]));
 
         $response->assertSessionHasErrors(['category_id' => 'La categoría seleccionada no existe.']);
@@ -100,12 +92,10 @@ class AdminProductoControllerTest extends TestCase
 
     public function test_two_products_cannot_share_the_same_slug(): void
     {
-        Storage::fake('public');
         Product::factory()->create(['slug' => 'logitech-g305']);
 
         $response = $this->actingAs(User::factory()->admin()->create())->post(route('admin.productos.store'), $this->validPayload([
             'name' => 'Logitech G305',
-            'image' => UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg'),
         ]));
 
         $response->assertSessionHasErrors(['slug' => 'Ese slug ya está registrado.']);
@@ -161,25 +151,20 @@ class AdminProductoControllerTest extends TestCase
         $this->assertSame('logitech-g305', $product->fresh()->slug);
     }
 
-    public function test_uploading_a_new_photo_deletes_the_previous_uploaded_one(): void
+    public function test_updating_a_product_replaces_its_image_path(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('productos/vieja.webp', 'contenido');
-        $product = Product::factory()->create(['image' => '/storage/productos/vieja.webp']);
+        $product = Product::factory()->create(['image' => '/images/teclados/ACIRA_1.webp']);
 
         $this->actingAs(User::factory()->admin()->create())->put(route('admin.productos.update', $product), $this->validPayload([
-            'image' => UploadedFile::fake()->create('nueva.webp', 80, 'image/webp'),
+            'image' => '/images/mouses/RAZER_VIPER_V3_PRO.webp',
         ]));
 
-        Storage::disk('public')->assertMissing('productos/vieja.webp');
-        Storage::disk('public')->assertExists(substr($product->fresh()->image, strlen('/storage/')));
+        $this->assertSame('/images/mouses/RAZER_VIPER_V3_PRO.webp', $product->fresh()->image);
     }
 
-    public function test_admin_deletes_a_product_with_its_specs_and_uploaded_photo(): void
+    public function test_admin_deletes_a_product_with_its_specs_without_deleting_image_files(): void
     {
-        Storage::fake('public');
-        Storage::disk('public')->put('productos/foto.webp', 'contenido');
-        $product = Product::factory()->create(['name' => 'Silla Iskur', 'image' => '/storage/productos/foto.webp']);
+        $product = Product::factory()->create(['name' => 'Silla Iskur', 'image' => '/images/teclados/ACIRA_1.webp']);
         $spec = ProductSpec::factory()->for($product)->create();
 
         $response = $this->actingAs(User::factory()->admin()->create())->delete(route('admin.productos.destroy', $product));
@@ -188,7 +173,6 @@ class AdminProductoControllerTest extends TestCase
         $response->assertSessionHas('status', 'Se eliminó el producto Silla Iskur.');
         $this->assertModelMissing($product);
         $this->assertModelMissing($spec);
-        Storage::disk('public')->assertMissing('productos/foto.webp');
     }
 
     /**
@@ -234,6 +218,7 @@ class AdminProductoControllerTest extends TestCase
             'description' => 'Un clásico confiable.',
             'specs' => '',
             'is_active' => '1',
+            'image' => '/images/teclados/ACIRA_1.webp',
             ...$overrides,
         ];
     }

@@ -61,7 +61,7 @@ class GuardarProductoRequest extends FormRequest
             'featured' => ['boolean'],
             'is_active' => ['boolean'],
             'specs' => ['nullable', 'string', 'max:3000'],
-            'image' => [$isNewProduct ? 'required' : 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => [$isNewProduct ? 'required' : 'nullable', 'string', 'max:255'],
         ];
     }
 
@@ -76,13 +76,13 @@ class GuardarProductoRequest extends FormRequest
     }
 
     /**
-     * Columnas del producto listas para guardar (la imagen y las specs se manejan aparte).
+     * Columnas del producto listas para guardar; las especificaciones se manejan aparte.
      *
      * @return array<string, mixed>
      */
     public function productAttributes(): array
     {
-        return $this->safe()->except(['image', 'specs']);
+        return $this->safe()->except(['specs']);
     }
 
     /**

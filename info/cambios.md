@@ -1,6 +1,6 @@
 # Cambios hechos en el proyecto
 
-**En una frase:** el sitio ahora funciona 100% con Laravel y el patrón MVC. Los datos salen de la base de datos a través de los **modelos**, los **controladores** los preparan y las **vistas** Blade arman el HTML en el servidor. Ya no queda ningún archivo de JavaScript propio.
+**En una frase:** el sitio ahora funciona 100% con Laravel y el patrón MVC. La lectura y escritura de productos, categorías y marcas está centralizada en los **controladores API**, los controladores web preparan las respuestas Blade y las **vistas** arman el HTML en el servidor. El proyecto no tiene JavaScript propio de negocio; Vite solo se usa para compilar los estilos.
 
 ---
 
@@ -11,12 +11,11 @@ Si ya tenías el proyecto instalado, corre esto en orden:
 ```bash
 composer install                   # se agregó Laravel Boost (herramienta de desarrollo)
 php artisan migrate:fresh --seed   # borra y vuelve a crear la base (cambiaron las migraciones)
-php artisan storage:link           # para que se vean las fotos subidas desde el panel admin
 npm run build                      # o "npm run dev"; ahora solo compila el CSS
-php artisan test                   # deben pasar las 64 pruebas
+php artisan test                   # deben pasar las 71 pruebas
 ```
 
-Si ya habías corrido `migrate:fresh --seed` con la versión anterior de este documento, basta con `php artisan migrate`, `php artisan db:seed --class=AdminUserSeeder` y `php artisan storage:link`.
+Si ya habías corrido `migrate:fresh --seed` con la versión anterior de este documento, basta con `php artisan migrate` y `php artisan db:seed --class=AdminUserSeeder`.
 
 Para entrar al panel de administración: correo `admin@lavirgocueva.co`, contraseña `admin` (ver sección 12).
 
@@ -46,21 +45,23 @@ Además, los formularios de login, registro y contacto eran de mentira (mostraba
 Ejemplo: un cliente abre `/productos?categoria=gpu`.
 
 1. **Ruta** (`routes/web.php`): `/productos` le corresponde a `ProductoController@index`.
-2. **Controlador** (`app/Http/Controllers/ProductoController.php`): lee el filtro `categoria=gpu` y le pide al modelo los productos activos de esa categoría.
-3. **Modelo** (`app/Models/Product.php`): hace la consulta con Eloquent (`Product::active()->...`) y devuelve los productos con su marca.
-4. **Vista** (`resources/views/productos.blade.php`): recorre los productos con `@foreach` y dibuja cada tarjeta con el componente `<x-product-card>`.
+2. **Controlador Blade** (`app/Http/Controllers/ProductoController.php`): lee el filtro `categoria=gpu` y delega la recuperación de datos a `ApiProductoController`.
+3. **Controlador API** (`app/Http/Controllers/Api/ApiProductoController.php`): hace la consulta con Eloquent y devuelve los productos activos de esa categoría con su marca.
+4. **Modelo** (`app/Models/Product.php`): define relaciones y scopes reutilizables para las consultas de la API.
+5. **Vista** (`resources/views/productos.blade.php`): recorre los productos con `@foreach` y dibuja cada tarjeta con el componente `<x-product-card>`.
 
 El navegador recibe el HTML ya terminado. No hay que esperar a que corra ningún script.
 
 | Página | Controlador | Modelo(s) | Vista |
 | --- | --- | --- | --- |
-| Inicio | `InicioController@index` | `Category`, `Product` (destacados) | `index` |
-| Catálogo | `ProductoController@index` | `Product`, `Category` | `productos` |
-| Ficha de producto | `ProductoController@show` | `Product` (+ marca, categoría, specs) | `producto` |
-| Ofertas | `OfertasController@index` | `Product` (rebajados) | `ofertas` |
-| Carrito | `CarritoController` | `Product` + la sesión | `carrito` |
+| Inicio | `InicioController@index` | `ApiCatalogoController`, `ApiProductoController` | `index` |
+| Catálogo | `ProductoController@index` | `ApiCatalogoController`, `ApiProductoController` | `productos` |
+| Ficha de producto | `ProductoController@show` | `ApiProductoController` | `producto` |
+| Ofertas | `OfertasController@index` | `ApiProductoController` | `ofertas` |
+| Carrito | `CarritoController` | `ApiProductoController` + la sesión | `carrito` |
 | Contacto | `ContactoController` | `ContactMessage` (nuevo) | `contacto` |
-| Login / salir | `LoginController` | `User` | `login` |
+| Login / salir web | `LoginController` | `User` | `login` |
+| Login / salir API | `ApiAuthController` | `User` + Sanctum | JSON |
 | Registro | `RegistroController` (antes `NuevouController`) | `User` | `registro` (antes `nuevou`) |
 | Nosotros, Garantía, Cambios, Pago seguro, FAQ | Ninguno: `Route::view` | Ninguno | Su vista |
 
@@ -78,7 +79,7 @@ El navegador recibe el HTML ya terminado. No hay que esperar a que corra ningún
 | `resources/js/` completo (`app.js`, `script.js`, `products.js`, `producto.js`) | Todo lo que hacían ahora lo hace Laravel (ver sección 4) |
 | Modelo `ProductImage`, su migración y su seeder | Ninguna página usaba esa tabla, y el seeder apuntaba a fotos que no existen (`ACIRA_2.webp`, `ACIRA_3.webp`) |
 | Migración `add_badge_featured_old_price_to_products_table` | Se fusionó con `create_products_table`: el proyecto no está publicado, así que no hace falta una migración aparte para tres columnas |
-| `tests/Unit/ExampleTest.php`, `tests/Feature/ExampleTest.php` | Pruebas de ejemplo de Laravel; las reemplazan las 44 pruebas reales |
+| `tests/Unit/ExampleTest.php`, `tests/Feature/ExampleTest.php` | Pruebas de ejemplo de Laravel; las reemplaza la suite de pruebas funcionales del proyecto |
 | `public/images/logo/logo-la-virgo-cueva.png`, `public/images/procesadores/PROCESADORES_EN_PROMO_2.webp` | Ninguna página las usaba. Si las necesitas: `git checkout HEAD -- <ruta>` |
 | CSS sin uso: testimonios, `.blob`, `.about__stats`, `.divider`, `.form-message`, `.hero__video` | Ninguna vista tenía esas clases |
 | Fuente "Instrument Sans" (en `vite.config.js` y `app.css`) | Venía con la plantilla de Laravel pero el sitio nunca la mostraba; solo agregaba 6 archivos de fuentes al build |
@@ -97,7 +98,8 @@ Los parciales de `resources/views/indexbox/` y `inicio.blade.php` ya se habían 
 | Preguntas frecuentes | Acordeón con JS | Etiquetas `<details>` y `<summary>`: el navegador las abre y cierra solo |
 | Menú hamburguesa (celular) | JS agregaba la clase `is-open` | Un checkbox oculto y CSS: el ícono es un `<label>` que lo activa |
 | Carrito | Lista fija con botones + y − hechos en JS | Carrito real guardado en la sesión de Laravel, con formularios (ver sección 5) |
-| Login y registro | Mostraban "Formulario de ejemplo" | Autenticación real de Laravel |
+| Login y registro web | Mostraban "Formulario de ejemplo" | Autenticación real mediante sesión y cookies |
+| Login API | No existía | `POST /api/login` devuelve un token Bearer de Sanctum |
 | Formato de precios (`formatCOP`) | Función JS | Componente `<x-precio>`: `$1.234.900` |
 
 ## 5. Funciones que antes eran de mentira y ahora funcionan
@@ -170,10 +172,12 @@ Resultado de `migrate:fresh --seed`: 8 categorías, 19 marcas, 38 productos (4 d
 | `/contacto` | GET / POST | `contacto` | `ContactoController@create` / `@store` |
 | `/login` | GET / POST | `login` | `LoginController` (solo sin sesión) |
 | `/registro` | GET / POST | `registro` | `RegistroController` (solo sin sesión) |
-| `/logout` | POST | `logout` | `LoginController@destroy` (solo con sesión) |
+| `/logout` | POST | `logout` | `LoginController@destroy` (solo con sesión web) |
+| `/api/login` | POST | `api.login` | `ApiAuthController@login` (devuelve token Sanctum) |
+| `/api/logout` | POST | `api.logout` | `ApiAuthController@logout` (revoca el token actual) |
 | `/nosotros`, `/garantia`, `/cambios_devoluciones`, `/pago_seguro`, `/faq` | GET | Igual que la URL | `Route::view` |
 | `/admin` | GET | `admin.inicio` | Redirige a `/admin/productos` |
-| `/admin/productos` | GET / POST | `admin.productos.index` / `admin.productos.store` | `AdminProductoController` (solo admin) |
+| `/admin/productos` | GET / POST | `admin.productos.index` / `admin.productos.store` | `AdminProductoController` (solo admin, sesión web) |
 | `/admin/productos/crear` | GET | `admin.productos.create` | `AdminProductoController@create` (solo admin) |
 | `/admin/productos/{id}/editar` | GET | `admin.productos.edit` | `AdminProductoController@edit` (solo admin) |
 | `/admin/productos/{id}` | PUT / DELETE | `admin.productos.update` / `admin.productos.destroy` | `AdminProductoController` (solo admin) |
@@ -182,7 +186,7 @@ Cambiaron tres URLs: `/producto?id=acira` ahora es `/productos/acira`, `/nuevou`
 
 ## 9. Pruebas automáticas
 
-Hay 64 pruebas en `tests/Feature/` (`php artisan test`). Usan una base SQLite en memoria y un disco de archivos falso, así que **no tocan tu base MySQL ni tus fotos**. Cubren:
+Hay 71 pruebas en `tests/Feature/` (`php artisan test`). Usan una base SQLite en memoria y un disco de archivos falso, así que **no tocan tu base MySQL ni tus fotos**. Cubren:
 
 - Que el catálogo, la portada y las ofertas muestren solo productos activos.
 - Los filtros, la búsqueda y la ficha de producto, incluido el 404.
@@ -239,14 +243,14 @@ Un apartado en `/admin/productos` para ver, crear, editar y eliminar productos s
   - La categoría y la marca deben existir en la base.
   - El slug (la parte final de la URL) no se puede repetir. Si se deja vacío, se genera solo a partir del nombre.
   - El precio anterior, si se llena, debe ser mayor que el precio actual: es lo que convierte al producto en oferta.
-  - La foto debe ser JPG, PNG o WEBP de hasta 2 MB, y es obligatoria al crear.
+  - La ruta de la foto debe ser texto de máximo 255 caracteres y es obligatoria al crear.
 - **Que no queden datos a medias.** Crear y editar guardan el producto y sus especificaciones dentro de una transacción: o se guarda todo, o nada.
 
 ### Detalles
 
 - **Especificaciones:** se escriben una por línea en un cuadro de texto, y se muestran con ✓ en la ficha del producto.
 - **Checkboxes:** "Visible en la tienda" oculta el producto sin borrarlo. "Destacado" lo muestra en "Lo más pedido" de la portada.
-- **Fotos subidas:** se guardan en `storage/app/public/productos/` y se ven gracias a `php artisan storage:link`. Al reemplazarlas o al eliminar el producto, se borra el archivo viejo. Las fotos originales del catálogo (`public/images/`) son parte del repositorio y nunca se borran.
+- **Fotos:** se guarda la ruta escrita en la columna `products.image`, por ejemplo `/images/teclados/ACIRA_1.webp`. No se cargan archivos ni se modifican archivos físicos al crear, editar o eliminar productos.
 - **URLs en español:** "crear" y "editar" (`Route::resourceVerbs` en `AppServiceProvider`).
 
 ### Archivos de esta parte
@@ -260,3 +264,79 @@ Un apartado en `/admin/productos` para ver, crear, editar y eliminar productos s
 | Vistas | `resources/views/admin/productos/` (`index`, `create`, `edit` y el formulario compartido `form`) |
 | Base de datos | Migración `add_is_admin_to_users_table`, `AdminUserSeeder` |
 | Pruebas | `tests/Feature/Http/Controllers/AdminProductoControllerTest.php`, `tests/Feature/Database/Seeders/AdminUserSeederTest.php` |
+
+## 13. API de catálogo y administración
+
+Se agregó una API JSON para centralizar la recuperación y persistencia de los productos, categorías y marcas. La API no reemplaza el renderizado Blade: los controladores web siguen respondiendo las páginas HTML, pero reutilizan las mismas operaciones de los controladores API y no duplican las consultas a la base de datos.
+
+### Endpoints públicos
+
+| URL | Método | Nombre | Qué devuelve |
+| --- | --- | --- | --- |
+| `/api/login` | POST | `api.login` | Valida las credenciales y devuelve un token de acceso de Sanctum |
+| `/api/productos` | GET | `api.productos.index` | Productos activos, filtrables con `?categoria=slug` y `?buscar=texto` |
+| `/api/productos/{slug}` | GET | `api.productos.show` | Detalle de un producto activo, con categoría, marca y especificaciones |
+| `/api/categorias` | GET | `api.categorias.index` | Categorías ordenadas por id |
+| `/api/marcas` | GET | `api.marcas.index` | Marcas ordenadas por nombre |
+
+### Endpoints del panel de administración
+
+Todos los endpoints siguientes están protegidos por `auth:sanctum` y por el permiso `can:administrar`. Las operaciones de escritura aceptan JSON; `image` es una ruta de texto.
+
+| URL | Método | Nombre | Qué hace |
+| --- | --- | --- | --- |
+| `/api/admin/productos` | GET | `api.admin.productos.index` | Lista todos los productos, incluidos los ocultos, con categoría y marca |
+| `/api/admin/productos` | POST | `api.admin.productos.store` | Crea un producto, sus especificaciones y su imagen; responde `201` |
+| `/api/admin/productos/{id}` | PUT / PATCH | `api.admin.productos.update` | Actualiza el producto, reemplaza opcionalmente la imagen y rehace sus especificaciones |
+| `/api/admin/productos/{id}` | DELETE | `api.admin.productos.destroy` | Elimina el producto y sus especificaciones, sin tocar archivos físicos; responde `204` |
+
+### Organización de la API
+
+- `POST /api/login` recibe `email` y `password`. Si son correctos, devuelve `token` y `user`.
+- El token se genera con Sanctum y se usa desde Postman con el tipo de autorización **Bearer Token**.
+- `POST /api/logout` revoca únicamente el token actual y requiere `auth:sanctum`.
+- `LoginController` sigue siendo necesario para el sitio web: maneja `GET /login`, `POST /login` y `POST /logout` con sesión y cookies. `ApiAuthController` es independiente y maneja el login/logout de clientes API con tokens Bearer.
+- `ApiProductoController` concentra las consultas de catálogo, portada, ofertas, carrito, detalle, productos relacionados y listado administrativo.
+- `ApiCatalogoController` concentra las consultas de categorías y marcas.
+- Crear y actualizar productos se ejecutan dentro de transacciones para evitar productos guardados sin sus especificaciones.
+- Las imágenes se representan mediante rutas de texto guardadas en `products.image`.
+- Al reemplazar o eliminar un producto no se borra ningún archivo físico.
+- El detalle público de un producto inactivo responde `404`, igual que la ficha Blade.
+- `AdminProductoController` conserva las validaciones del formulario, las redirecciones, las vistas y la experiencia del panel; la persistencia se delega a `ApiProductoController`.
+
+### Archivos de esta parte
+
+| Capa | Archivo |
+| --- | --- |
+| Rutas API | `routes/api.php` |
+| API de productos | `app/Http/Controllers/Api/ApiProductoController.php` |
+| API de catálogo | `app/Http/Controllers/Api/ApiCatalogoController.php` |
+| Panel Blade | `app/Http/Controllers/AdminProductoController.php` |
+| Catálogo Blade | `app/Http/Controllers/ProductoController.php`, `InicioController.php`, `OfertasController.php`, `CarritoController.php` |
+| Validación | `app/Http/Requests/GuardarProductoRequest.php` |
+| Pruebas API | `tests/Feature/Api/ApiProductoControllerTest.php` |
+
+### Verificación
+
+- Se verificaron las rutas `GET`, `POST`, `PUT`, `PATCH` y `DELETE` del panel API.
+- Se probaron la autenticación del endpoint administrativo, la creación, la eliminación y el filtrado de productos inactivos.
+- Las pruebas de la API y de los controladores Blade afectados pasaron correctamente.
+
+### Cómo obtener y usar el token de acceso
+
+1. En Postman crea una petición `POST` a `/api/login`.
+2. Usa `Content-Type: application/json` y envía:
+
+```json
+{
+    "email": "admin@lavirgocueva.co",
+    "password": "admin"
+}
+```
+
+3. Copia el valor `token` de la respuesta.
+4. En la pestaña **Authorization** de Postman selecciona **Bearer Token** y pega el valor de `token`.
+
+Para crear un producto usa `POST /api/admin/productos` con `application/json`; `image` debe ser una ruta como `/images/teclados/ACIRA_1.webp`. El usuario debe tener `is_admin = true`; un usuario normal puede obtener token, pero recibirá `403` al intentar usar los endpoints administrativos.
+
+El token es una credencial secreta: no lo subas al repositorio, no lo compartas y revócalo con `POST /api/logout` cuando termines de usarlo.

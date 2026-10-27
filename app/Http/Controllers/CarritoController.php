@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Api\ApiProductoController;
 use App\Models\Product;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,15 +20,13 @@ class CarritoController extends Controller
      */
     public const SHIPPING_COST = 17900;
 
+    public function __construct(private readonly ApiProductoController $productoApi) {}
+
     public function index(): View
     {
         $cart = session(self::SESSION_KEY, []);
 
-        $items = Product::active()
-            ->with('brand')
-            ->whereKey(array_keys($cart))
-            ->orderBy('id')
-            ->get()
+        $items = $this->productoApi->getCartProducts(array_keys($cart))
             ->map(fn (Product $product): array => [
                 'product' => $product,
                 'quantity' => $cart[$product->id],

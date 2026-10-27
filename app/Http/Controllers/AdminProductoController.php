@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Api\ApiCatalogoController;
+use App\Http\Controllers\Api\ApiProductoController;
 use App\Http\Requests\GuardarProductoRequest;
-use App\Models\Brand;
-use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -20,15 +17,15 @@ use Illuminate\View\View;
  */
 class AdminProductoController extends Controller
 {
-    /**
-     * Carpeta del disco "public" donde se guardan las fotos subidas desde el panel.
-     */
-    private const IMAGE_FOLDER = 'productos';
+    public function __construct(
+        private readonly ApiCatalogoController $catalogoApi,
+        private readonly ApiProductoController $productoApi,
+    ) {}
 
     public function index(): View
     {
         return view('admin.productos.index', [
-            'products' => Product::with(['category', 'brand'])->orderBy('id')->get(),
+            'products' => $this->productoApi->getAdminProducts(),
         ]);
     }
 
@@ -42,14 +39,7 @@ class AdminProductoController extends Controller
 
     public function store(GuardarProductoRequest $request): RedirectResponse
     {
-        $attributes = [...$request->productAttributes(), 'image' => $this->storeImage($request)];
-
-        $product = DB::transaction(function () use ($attributes, $request): Product {
-            $product = Product::create($attributes);
-            $product->replaceSpecs($request->specValues());
-
-            return $product;
-        });
+        $product = $this->productoApi->createProduct($request->productAttributes(), $request->specValues());
 
         return redirect()->route('admin.productos.index')->with('status', "Se creó el producto {$product->name}.");
     }
@@ -59,35 +49,21 @@ class AdminProductoController extends Controller
         $product->load('specs');
 
         return view('admin.productos.edit', [
-            'product' => $product,
+            'product' => $this->productoApi->getProductDetails($product),
             ...$this->formOptions(),
         ]);
     }
 
     public function update(GuardarProductoRequest $request, Product $product): RedirectResponse
     {
-        $attributes = $request->productAttributes();
-        $replacedImage = null;
-
-        if ($request->hasFile('image')) {
-            $replacedImage = $product->image;
-            $attributes['image'] = $this->storeImage($request);
-        }
-
-        DB::transaction(function () use ($product, $attributes, $request): void {
-            $product->update($attributes);
-            $product->replaceSpecs($request->specValues());
-        });
-
-        $this->deleteStoredImage($replacedImage);
+        $product = $this->productoApi->updateProduct($product, $request->productAttributes(), $request->specValues());
 
         return redirect()->route('admin.productos.index')->with('status', "Se actualizó el producto {$product->name}.");
     }
 
     public function destroy(Product $product): RedirectResponse
     {
-        $product->delete();
-        $this->deleteStoredImage($product->image);
+        $this->productoApi->deleteProduct($product);
 
         return redirect()->route('admin.productos.index')->with('status', "Se eliminó el producto {$product->name}.");
     }
@@ -95,32 +71,13 @@ class AdminProductoController extends Controller
     /**
      * Categorías y marcas para los selects del formulario.
      *
-     * @return array{categories: Collection<int, Category>, brands: Collection<int, Brand>}
+     * @return array{categories: Collection, brands: Collection}
      */
     private function formOptions(): array
     {
         return [
-            'categories' => Category::orderBy('id')->get(),
-            'brands' => Brand::orderBy('name')->get(),
+            'categories' => $this->catalogoApi->getCategories(),
+            'brands' => $this->catalogoApi->getBrands(),
         ];
-    }
-
-    /**
-     * Guarda la foto subida en storage/app/public/productos y devuelve su URL pública (/storage/...).
-     */
-    private function storeImage(GuardarProductoRequest $request): string
-    {
-        return '/storage/'.$request->file('image')->store(self::IMAGE_FOLDER, 'public');
-    }
-
-    /**
-     * Borra una foto que se haya subido desde el panel. Las del catálogo original
-     * (public/images/...) son parte del repositorio y no se tocan.
-     */
-    private function deleteStoredImage(?string $image): void
-    {
-        if ($image !== null && str_starts_with($image, '/storage/')) {
-            Storage::disk('public')->delete(Str::after($image, '/storage/'));
-        }
     }
 }
